@@ -41,6 +41,7 @@ type Logger struct {
 	currLevel     Level
 	currText      string
 	currCondition bool
+	enableShow    bool
 }
 
 // New creates a new Logger.   The out variable sets the
@@ -57,6 +58,7 @@ func New(name string) *Logger {
 		output:        os.Stdout,
 		buf:           make([]byte, 0, lineBuffer),
 		currCondition: true,
+		enableShow: true,
 	}
 
 	l.SetParts(LogPart_Level, LogPart_Name, LogPart_Time)
@@ -64,6 +66,10 @@ func New(name string) *Logger {
 	add(l)
 
 	return l
+}
+
+func (self *Logger) SetEnable(enable bool) {
+	self.enableShow = enable
 }
 
 func (self *Logger) SetOutptut(writer io.Writer) {
@@ -112,7 +118,9 @@ func (self *Logger) selectColorByText() {
 }
 
 func (self *Logger) Log(level Level, text string) {
-
+	if !self.enableShow {
+		return
+	}
 	// 防止日志并发打印导致的文本错位
 	self.mu.Lock()
 	defer self.mu.Unlock()
