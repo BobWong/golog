@@ -1,7 +1,7 @@
 package golog
 
-func LogPart_Level(log *Logger) {
-	log.WriteRawString(levelString[log.currLevel])
+func LogPart_CurrLevel(log *Logger) {
+	log.WriteRawString(log.CurrLevelString())
 	log.WriteRawByte(' ')
 
 }
