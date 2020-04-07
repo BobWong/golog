@@ -1,189 +1,127 @@
-// Copyright 2009 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2014 beego Author. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Package log implements a simple logging package. It defines a type, Logger,
-// with methods for formatting output. It also has a predefined 'standard'
-// Logger accessible through helper functions Print[f|ln], Fatal[f|ln], and
-// Panic[f|ln], which are easier to use than creating a Logger manually.
-// That logger writes to standard error and prints the date and time
-// of each logged message.
-// The Fatal functions call os.Exit(1) after writing the log message.
-// The Panic functions call panic after writing the log message.
-package golog
+package beego
 
 import (
-	"io"
-	"runtime"
+	"github.com/bobwong89757/golog/logs"
 	"strings"
-	"sync"
+
 )
 
-type PartFunc func(*Logger)
+// Log levels to control the logging output.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+const (
+	LevelEmergency = iota
+	LevelAlert
+	LevelCritical
+	LevelError
+	LevelWarning
+	LevelNotice
+	LevelInformational
+	LevelDebug
+)
 
-// A Logger represents an active logging object that generates lines of
-// output to an io.Writer.  Each logging operation makes a single call to
-// the Writer's Write method.  A Logger can be used simultaneously from
-// multiple goroutines; it guarantees to serialize access to the Writer.
-type Logger struct {
-	mu          sync.Mutex // ensures atomic writes; protects the following fields
-	buf         []byte     // for accumulating text to write
-	level       Level
-	enableColor bool
-	name        string
-	pkgName     string
-	userData    interface{}
-	colorFile   *ColorFile
+// BeeLogger references the used application logger.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+var BeeLogger = logs.GetBeeLogger()
 
-	parts []PartFunc
-
-	output io.Writer
-
-	currColor     Color
-	currLevel     Level
-	currText      string
-	currCondition bool
-	currContext   interface{}
+// SetLevel sets the global log level used by the simple logger.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func SetLevel(l int) {
+	logs.SetLevel(l)
 }
 
-// New creates a new Logger.   The out variable sets the
-// destination to which log data will be written.
-// The prefix appears at the beginning of each generated log line.
-// The flag argument defines the logging properties.
-
-const lineBuffer = 32
-
-func getPackageName() string {
-	pc, _, _, _ := runtime.Caller(2)
-	raw := runtime.FuncForPC(pc).Name()
-	return strings.TrimSuffix(raw, ".init.ializers")
-}
-func New(name string) *Logger {
-
-	l := &Logger{
-		level:         Level_Debug,
-		name:          name,
-		pkgName:       getPackageName(),
-		buf:           make([]byte, 0, lineBuffer),
-		currCondition: true,
-	}
-
-	l.SetParts(LogPart_CurrLevel, LogPart_Name, LogPart_Time)
-
-	add(l)
-
-	return l
+// SetLogFuncCall set the CallDepth, default is 3
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func SetLogFuncCall(b bool) {
+	logs.SetLogFuncCall(b)
 }
 
-func (self *Logger) EnableColor(v bool) {
-	self.mu.Lock()
-	self.enableColor = v
-	self.mu.Unlock()
+// SetLogger sets a new logger.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func SetLogger(adaptername string, config string) error {
+	return logs.SetLogger(adaptername, config)
 }
 
-func (self *Logger) SetParts(f ...PartFunc) {
-
-	self.parts = []PartFunc{logPart_ColorBegin}
-	self.parts = append(self.parts, f...)
-	self.parts = append(self.parts, logPart_Text, logPart_ColorEnd, logPart_Line)
+// Emergency logs a message at emergency level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Emergency(v ...interface{}) {
+	logs.Emergency(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) SetFullParts(f ...PartFunc) {
-
-	self.parts = f
+// Alert logs a message at alert level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Alert(v ...interface{}) {
+	logs.Alert(generateFmtStr(len(v)), v...)
 }
 
-// 二次开发接口
-func (self *Logger) WriteRawString(s string) {
-	self.buf = append(self.buf, s...)
+// Critical logs a message at critical level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Critical(v ...interface{}) {
+	logs.Critical(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) WriteRawByte(b byte) {
-	self.buf = append(self.buf, b)
+// Error logs a message at error level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Error(v ...interface{}) {
+	logs.Error(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) WriteRawByteSlice(b []byte) {
-	self.buf = append(self.buf, b...)
+// Warning logs a message at warning level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Warning(v ...interface{}) {
+	logs.Warning(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) Name() string {
-	return self.name
+// Warn compatibility alias for Warning()
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Warn(v ...interface{}) {
+	logs.Warn(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) SetUserData(data interface{}) {
-	self.userData = data
+// Notice logs a message at notice level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Notice(v ...interface{}) {
+	logs.Notice(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) UserData() interface{} {
-	return self.userData
+// Informational logs a message at info level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Informational(v ...interface{}) {
+	logs.Informational(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) PkgName() string {
-	return self.pkgName
+// Info compatibility alias for Warning()
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Info(v ...interface{}) {
+	logs.Info(generateFmtStr(len(v)), v...)
 }
 
-func (self *Logger) Buff() []byte {
-	return self.buf
+// Debug logs a message at debug level.
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Debug(v ...interface{}) {
+	logs.Debug(generateFmtStr(len(v)), v...)
 }
 
-// 仅供LogPart访问
-func (self *Logger) Text() string {
-	return self.currText
+// Trace logs a message at trace level.
+// compatibility alias for Warning()
+// Deprecated: use github.com/astaxie/beego/logs instead.
+func Trace(v ...interface{}) {
+	logs.Trace(generateFmtStr(len(v)), v...)
 }
 
-// 仅供LogPart访问
-func (self *Logger) Context() interface{} {
-	return self.currContext
-}
-
-func (self *Logger) LogText(level Level, text string, ctx interface{}) {
-
-	// 防止日志并发打印导致的文本错位
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	self.currLevel = level
-	self.currText = text
-	self.currContext = ctx
-
-	defer self.resetState()
-
-	if self.currLevel < self.level || !self.currCondition {
-		return
-	}
-
-	self.selectColorByText()
-	self.selectColorByLevel()
-
-	self.buf = self.buf[:0]
-
-	for _, p := range self.parts {
-		p(self)
-	}
-
-	if self.output != nil {
-		self.output.Write(self.buf)
-	} else {
-		globalWrite(self.buf)
-	}
-
-}
-
-func (self *Logger) Condition(value bool) *Logger {
-
-	self.mu.Lock()
-	self.currCondition = value
-	self.mu.Unlock()
-
-	return self
-}
-
-func (self *Logger) resetState() {
-	self.currColor = NoColor
-	self.currCondition = true
-	self.currContext = nil
-}
-
-func (self *Logger) IsDebugEnabled() bool {
-	return self.level == Level_Debug
+func generateFmtStr(n int) string {
+	return strings.Repeat("%v ", n)
 }
